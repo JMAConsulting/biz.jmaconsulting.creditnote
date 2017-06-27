@@ -23,11 +23,60 @@ function creditnote_civicrm_xmlMenu(&$files) {
 }
 
 /**
+ * Implements hook_civicrm_buildForm().
+ *
+ * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_buildForm
+ */
+function creditnote_civicrm_buildForm($formName, &$form) {
+  if ($formName == 'CRM_Financial_Form_Payment' && !empty($form->paymentInstrumentID)) {
+    if ($form->paymentInstrumentID == CRM_Core_PseudoConstant::getKey('CRM_Contribute_BAO_Contribution', 'payment_instrument_id', 'Credit Note')) {
+      $form->assign('paymentFields', array('credit_note_contact_id', 'credit_note_amount'));
+
+      // assign payment fields of Credit Note
+      $form->addEntityRef('credit_note_contact_id', ts('Credit Note Contact'), array('api' => array('extra' => array('email'))));
+      $form->add('select', 'credit_note_amount',
+        ts('Credit Note Amount'),
+        _getCreditNoteAmounts(),
+        FALSE, array('class' => 'crm-select2', 'multiple' => 'multiple', 'placeholder' => ts('- any -'))
+      );
+    }
+  }
+}
+
+// Function will return the list of CN amounts,
+// NOTE: Hardcoded values are passed for now to test UI changes
+function _getCreditNoteAmounts() {
+  return array(
+    'financial_trxn_id_1' => 'CN_112 : $125',
+    'financial_trxn_id_2' => 'CN_127 : $143',
+  );
+}
+
+/**
  * Implements hook_civicrm_install().
  *
  * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_install
  */
 function creditnote_civicrm_install() {
+  $result = civicrm_api3('OptionValue', 'Create', array(
+    'option_group_id' => 'payment_instrument',
+    'label' => 'Credit Note',
+    'name' => 'Credit Note',
+    'is_reserved' => 1,
+    'filter' => 1,
+  ));
+
+  if (!empty($result['id'])) {
+    $accountType = CRM_Core_PseudoConstant::accountOptionValues('financial_account_type', NULL, " AND v.name = 'Asset' ");
+    $financialAccountID = array_search('Accounts Receivable', CRM_Contribute_PseudoConstant::financialAccount(NULL, key($accountType)));
+    civicrm_api3('EntityFinancialAccount', 'create', array(
+      'entity_table' => 'civicrm_option_value',
+      'entity_id' => $result['id'],
+      'account_relationship' => key(CRM_Core_PseudoConstant::accountOptionValues('account_relationship', NULL, " AND v.name LIKE 'Asset Account is' ")),
+      'financial_account_id' => $financialAccountID,
+    ));
+  }
+
   _creditnote_civix_civicrm_install();
 }
 
@@ -37,6 +86,15 @@ function creditnote_civicrm_install() {
  * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_uninstall
  */
 function creditnote_civicrm_uninstall() {
+  if ($id = _getCNPaymentInstrumentID()) {
+    $entityFinancialAccountID = CRM_Utils_Array::value('id', civicrm_api3('EntityFinancialAccount', 'get', array(
+      'entity_table' => 'civicrm_option_value',
+      'entity_id' => $id,
+    )));
+    if ($entityFinancialAccountID) {
+      civicrm_api3('EntityFinancialAccount', 'delete', array('id' => $entityFinancialAccountID));
+    }
+  }
   _creditnote_civix_civicrm_uninstall();
 }
 
@@ -83,7 +141,26 @@ function creditnote_civicrm_upgrade($op, CRM_Queue_Queue $queue = NULL) {
  * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_managed
  */
 function creditnote_civicrm_managed(&$entities) {
+  if ($id = _getCNPaymentInstrumentID()) {
+    $entities[] = array(
+      'module' => 'biz.jmaconsulting.creditnote',
+      'name' => 'CreditNote',
+      'entity' => 'OptionValue',
+      'params' => array(
+        'version' => 3,
+        'id' => $id,
+      ),
+    );
+  }
   _creditnote_civix_civicrm_managed($entities);
+}
+
+function _getCNPaymentInstrumentID() {
+  $result = civicrm_api3('OptionValue', 'Get', array(
+    'option_group_id' => 'payment_instrument',
+    'name' => 'Credit Note',
+  ));
+  return CRM_Utils_Array::value('id', $result);
 }
 
 /**
