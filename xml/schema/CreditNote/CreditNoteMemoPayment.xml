@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="iso-8859-1" ?>
+
+<table>
+  <base>CRM/CreditNote</base>
+  <class>CreditNoteMemoPayment</class>
+  <name>civicrm_creditnote_memo_payment</name>
+  <comment></comment>
+  <log>true</log>
+  <field>
+    <name>id</name>
+    <type>int unsigned</type>
+    <required>true</required>
+    <comment></comment>
+  </field>
+  <primaryKey>
+    <name>id</name>
+    <autoincrement>true</autoincrement>
+  </primaryKey>
+  <field>
+    <name>creditnote_memo_id</name>
+    <type>int unsigned</type>
+    <required>true</required>
+    <comment>FK to CreditNote Memo ID</comment>
+  </field>
+  <foreignKey>
+    <name>creditnote_memo_id</name>
+    <table>civicrm_creditnote_memo</table>
+    <key>id</key>
+    <onDelete>CASCADE</onDelete>
+  </foreignKey>
+  <field>
+    <name>financial_trxn_id</name>
+    <type>int unsigned</type>
+    <comment>Financial trxn id</comment>
+  </field>
+  <foreignKey>
+    <name>financial_trxn_id</name>
+    <table>civicrm_financial_trxn</table>
+    <key>id</key>
+    <onDelete>CASCADE</onDelete>
+  </foreignKey>
+</table>

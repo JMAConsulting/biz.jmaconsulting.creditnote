@@ -29,6 +29,9 @@ function creditnote_civicrm_xmlMenu(&$files) {
  */
 function creditnote_civicrm_buildForm($formName, &$form) {
   if ($formName == 'CRM_Financial_Form_Payment' && !empty($form->paymentInstrumentID)) {
+    if (CRM_Utils_Array::value('financial_trxn_id', $form->_values)) {
+      return NULL;
+    }
     if ($form->paymentInstrumentID == CRM_Core_PseudoConstant::getKey('CRM_Contribute_BAO_Contribution', 'payment_instrument_id', 'Credit Note')) {
       $form->assign('paymentFields', array('credit_note_contact_id', 'credit_note_amount'));
 
@@ -36,8 +39,8 @@ function creditnote_civicrm_buildForm($formName, &$form) {
       $form->addEntityRef('credit_note_contact_id', ts('Credit Note Contact'), array('api' => array('extra' => array('email'))));
       $form->add('select', 'credit_note_amount',
         ts('Credit Note Amount'),
-        _getCreditNoteAmounts(),
-        FALSE, array('class' => 'crm-select2', 'multiple' => 'multiple', 'placeholder' => ts('- any -'))
+        CRM_CreditNote_BAO_CreditNote::getCreditNotes(),
+        FALSE, array('class' => 'crm-select2', 'placeholder' => ts('- any -'))
       );
     }
   }
