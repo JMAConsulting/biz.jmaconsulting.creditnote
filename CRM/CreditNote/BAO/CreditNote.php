@@ -158,18 +158,19 @@ class CRM_CreditNote_BAO_CreditNote extends CRM_Core_DAO {
         $params['amount'] = $creditNoteAmount;
       }
       self::addCreditNotePayments($params);
-      $amount -= $creditNoteAmount;
+      $amount -= $params['amount'];
+      if ($amount <= 0) break;
     }
   }
 
   public static function getCreditNoteDetails ($creditNotes) {
     $creditNote = implode(',', $creditNotes);
-    $query = "SELECT ccm.id, ccm.amount + (-SUM(IFNULL(ccmp.amount, 0))) as amount
+    $query = "SELECT id, amount FROM (SELECT ccm.id, ccm.amount + (-SUM(IFNULL(ccmp.amount, 0))) as amount
       FROM civicrm_creditnote_memo ccm
         INNER JOIN  civicrm_contribution cc ON cc.id = ccm.contribution_id
         LEFT JOIN civicrm_creditnote_memo_payment ccmp ON ccmp.creditnote_memo_id = ccm.id
       WHERE ccm.id IN ($creditNote)
-      GROUP BY cc.id
+      GROUP BY cc.id) as temp WHERE amount > 0 ORDER BY amount
     ";
     $dao = CRM_Core_DAO::executeQuery($query);
     $creditNotes = array();

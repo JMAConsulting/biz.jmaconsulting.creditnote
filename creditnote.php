@@ -57,7 +57,7 @@ function creditnote_civicrm_buildForm($formName, &$form) {
       $form->add('select', 'credit_note_id',
         ts('Credit Note Amount'),
         CRM_CreditNote_BAO_CreditNote::getCreditNotes(),
-        TRUE, array('class' => 'crm-select2', 'placeholder' => ts('- any -'))
+        TRUE, array('class' => 'crm-select2', 'multiple' => 'true', 'placeholder' => ts('- any -'))
       );
     }
   }
@@ -326,6 +326,30 @@ function creditnote_civicrm_postSave_civicrm_financial_trxn($dao) {
 	$dao->total_amount
       );
       CRM_Core_Smarty::singleton()->assign('creditNote', NULL);
+    }
+  }
+}
+
+/**
+ * Implements hook_civicrm_pre().
+ *
+ * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_pre
+ *
+ */
+function creditnote_civicrm_pre($op, $objectName, &$objectId, &$params) {
+  if ($objectName == 'Contribution' && $op == 'create') {
+    $creditNote = CRM_Core_Smarty::singleton()->get_template_vars('creditNote');
+    if (!$creditNote && !empty($params['credit_note_id'])) {
+      $creditNote = $params['credit_note_id'];
+      CRM_Core_Smarty::singleton()->assign('creditNote', $creditNote);
+    }
+    if ($creditNote) {
+      $creditNoteAmount = CRM_CreditNote_BAO_CreditNote::getCreditNoteAmount($creditNote);
+      if ($creditNoteAmount < $params['total_amount']) {
+        $params['partial_payment_total'] = $params['total_amount'];
+        $params['partial_amount_to_pay'] = $creditNoteAmount;
+        $params['contribution_status_id'] = CRM_Core_PseudoConstant::getKey('CRM_Contribute_BAO_Contribution', 'contribution_status_id', 'Partially paid');
+      }
     }
   }
 }
