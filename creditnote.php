@@ -261,7 +261,7 @@ function creditnote_civicrm_links($op, $objectName, &$objectId, &$links, &$mask 
   if ($op == 'contribution.selector.row' && $objectName == 'Contribution') {
     $contributionStatus = CRM_Core_DAO::getFieldValue('CRM_Contribute_BAO_Contribution', $objectId, 'contribution_status_id');
     $contributionStatus = CRM_Core_PseudoConstant::getName('CRM_Contribute_BAO_Contribution', 'contribution_status_id', $contributionStatus);
-    if (in_array($contributionStatus, array('Refunded', 'Pending refund'))) {
+    if (in_array($contributionStatus, array('Refunded', 'Pending refund')) && !CRM_CreditNote_BAO_CreditNote::checkIdCreditNoteCreated($objectId)) {
       $links[] = array(
         'name' => ts('Create Credit Note'),
 	'url' => '',

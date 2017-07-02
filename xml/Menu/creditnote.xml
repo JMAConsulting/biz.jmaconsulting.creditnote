@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<menu>
+  <item>
+    <path>civicrm/contribute/createCreditNote</path>
+    <title>Create Credit Note</title>
+    <page_callback>CRM_CreditNote_BAO_CreditNote::createCreditNote</page_callback>
+    <access_arguments>access CiviContribute,administer Accounting</access_arguments>
+    <weight>640</weight>
+    <component>CiviContribute</component>
+  </item>
+</menu>

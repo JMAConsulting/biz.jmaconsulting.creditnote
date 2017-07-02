@@ -55,7 +55,7 @@ class CRM_CreditNote_BAO_CreditNote extends CRM_Core_DAO {
       $op = 'create';
     }
     CRM_Utils_Hook::pre($op, 'CreditNoteMemo', $entityId, $params);
-    $creditNoteMemo = CRM_CreditNote_DAO_CreditNoteMemo();
+    $creditNoteMemo = new CRM_CreditNote_DAO_CreditNoteMemo();
     $creditNoteMemo->copyValues($params);
     $creditNoteMemo->save();
     CRM_Utils_Hook::post($op, 'CreditNoteMemo', $creditNoteMemo->id, $creditNoteMemo);
@@ -74,6 +74,46 @@ class CRM_CreditNote_BAO_CreditNote extends CRM_Core_DAO {
     $creditNoteMemoPayment->save();
     CRM_Utils_Hook::post($op, 'CreditNoteMemoPayment', $creditNoteMemoPayment->id, $creditNoteMemoPayment);
     return $creditNoteMemoPayment;
+  }
+
+  public static function createCreditNote() {
+    $contributionId = CRM_Utils_Request::retrieve('contributionId', 'Positive');
+    $error = FALSE;
+    try {
+      $alreadyCreated = self::checkIdCreditNoteCreated($contributionId);
+      if ($alreadyCreated) {
+        require_once 'api/Exception.php';
+        throw new CiviCRM_API3_Exception(ts('Credit Note is already created for this contribution.'), 'undefined', array());
+      }
+      $contribution = civicrm_api3('Contribution', 'getSingle', array(
+        'return' => array("total_amount", 'contribution_status_id'),
+	'id' => $contributionId,
+	'contribution_status_id' => array('IN' => array('Refunded', 'Pending refund')),
+      ));
+      $contributionStatus = CRM_Core_PseudoConstant::getName('CRM_Contribute_BAO_Contribution', 'contribution_status_id', $contribution['contribution_status_id']);
+      if ($contributionStatus == 'Refunded') {
+        $creditNoteAmount = $contribution['total_amount'];
+      }
+      else {
+        $paidAmount = CRM_Core_BAO_FinancialTrxn::getPartialPaymentWithType($contributionId, 'contribution', TRUE, $contribution['total_amount']);
+        $creditNoteAmount = CRM_Utils_Array::value('refund_due', $paidAmount);
+      }
+      if (!empty($creditNoteAmount)) {
+        $params = array(
+          'contribution_id' => $contributionId,
+	  'created_date' => date('Ymd'),
+	  'amount' => abs($creditNoteAmount),
+        );
+        self::addCreditNote($params);
+      }
+    }
+    catch (CiviCRM_API3_Exception $e) {
+      $error = TRUE;
+    }
+  }
+
+  public static function checkIdCreditNoteCreated($contributionId) {
+    return CRM_Core_DAO::getFieldValue('CRM_CreditNote_DAO_CreditNoteMemo', $contributionId, 'id', 'contribution_id');
   }
 
 }
