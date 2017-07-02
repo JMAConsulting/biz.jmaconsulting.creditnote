@@ -7,7 +7,7 @@ if [ -z "$CIVIROOT" -o ! -d "$CIVIROOT" ]; then
   echo "ERROR: invalid civicrm-dir: [$CIVIROOT]"
   echo ""
   echo "usage: $0 <civicrm-dir>"
-  echo "example: $0 /var/www/civicrm/sites/all/modules/civicrm"
+  echo "example: $0 /var/www/drupal/sites/all/modules/civicrm"
   exit
 fi
 
@@ -26,7 +26,7 @@ function buildXmlSchema() {
   ## We build on the core Schema.xml so that we don't have to do as much work to
   ## manage inter-table dependencies
   grep -v '</database>' "$CIVIROOT"/xml/schema/Schema.xml > "$XMLBUILD"/Schema.xml
-  cat "$XMLBUILD"/Schema.xml.inc>> "$XMLBUILD"/Schema.xml
+  cat "$XMLBUILD"/Schema.xml.inc >> "$XMLBUILD"/Schema.xml
   echo '</database>' >> "$XMLBUILD"/Schema.xml
 }
 
@@ -36,13 +36,14 @@ function buildDAO() {
   pushd $CIVIROOT/xml > /dev/null
     php GenCode.php $XMLBUILD/Schema.xml
   popd > /dev/null
+
   [ ! -d "$EXTROOT/CRM/CreditNote/DAO/" ] && mkdir -p "$EXTROOT/CRM/CreditNote/DAO/"
   cp -f "$CIVIROOT/CRM/CreditNote/DAO"/* "$EXTROOT/CRM/CreditNote/DAO/"
 }
 
 ##############################
 function cleanup() {
-  for DIR in "$XMLBUILD" "$CIVIROOT/CRM/CreditNote/DAO" "$EXTROOT/CRM/CreditNote/DAO/" ; do
+  for DIR in "$XMLBUILD" "$CIVIROOT/CRM/CreditNote" "$EXTROOT/CRM/CreditNote/DAO/" ; do
     if [ -e "$DIR" ]; then
       rm -rf "$DIR"
     fi
@@ -53,6 +54,7 @@ function cleanup() {
 ##############################
 ## Main
 set -e
+cleanup
 buildXmlSchema
 buildDAO
 echo
