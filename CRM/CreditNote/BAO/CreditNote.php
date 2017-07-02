@@ -38,10 +38,19 @@ class CRM_CreditNote_BAO_CreditNote extends CRM_Core_DAO {
    * Function will return the list of CN amounts.
    */ 
   public static function getCreditNotes() {
-    return array(
-      'financial_trxn_id_1' => 'CN_112 : $125',
-      'financial_trxn_id_2' => 'CN_127 : $143',
-    );
+    $query = "SELECT ccm.id, ccm.contribution_id, ccm.amount, cc.currency
+      FROM civicrm_creditnote_memo ccm
+        INNER JOIN  civicrm_contribution cc ON cc.id = ccm.contribution_id
+      WHERE amount > 0
+    ";
+    $cnPrefix = CRM_Contribute_BAO_Contribution::checkContributeSettings('credit_notes_prefix');
+    $dao = CRM_Core_DAO::executeQuery($query);
+    $creditNotes = array();
+    while ($dao->fetch()) {
+      $amount = CRM_Utils_Money::format($dao->amount, $dao->currency);
+      $creditNotes[$dao->id] = "{$cnPrefix}{$dao->contribution_id} : {$amount}";
+    }
+    return $creditNotes;
   }
 
   public static function getCreditNoteAmount($creditNote) {
