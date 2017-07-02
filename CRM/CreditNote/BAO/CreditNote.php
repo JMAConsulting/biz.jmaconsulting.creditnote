@@ -48,4 +48,32 @@ class CRM_CreditNote_BAO_CreditNote extends CRM_Core_DAO {
     return 100;
   }
 
+  public static function addCreditNote($params) {
+    $op = 'edit';
+    $entityId = CRM_Utils_Array::value('id', $params);
+    if (!$entityId) {
+      $op = 'create';
+    }
+    CRM_Utils_Hook::pre($op, 'CreditNoteMemo', $entityId, $params);
+    $creditNoteMemo = CRM_CreditNote_DAO_CreditNoteMemo();
+    $creditNoteMemo->copyValues($params);
+    $creditNoteMemo->save();
+    CRM_Utils_Hook::post($op, 'CreditNoteMemo', $creditNoteMemo->id, $creditNoteMemo);
+    return $creditNoteMemo;
+  }
+  
+  public static function addCreditNotePayments($params) {
+    $op = 'edit';
+    $entityId = CRM_Utils_Array::value('id', $params);
+    if (!$entityId) {
+      $op = 'create';
+    }
+    CRM_Utils_Hook::pre($op, 'CreditNoteMemoPayment', $entityId, $params);
+    $creditNoteMemoPayment = CRM_CreditNote_DAO_CreditNoteMemoPayment();
+    $creditNoteMemoPayment->copyValues($params);
+    $creditNoteMemoPayment->save();
+    CRM_Utils_Hook::post($op, 'CreditNoteMemoPayment', $creditNoteMemoPayment->id, $creditNoteMemoPayment);
+    return $creditNoteMemoPayment;
+  }
+
 }
