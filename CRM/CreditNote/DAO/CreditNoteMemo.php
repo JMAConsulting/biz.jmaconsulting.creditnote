@@ -130,7 +130,7 @@ class CRM_CreditNote_DAO_CreditNoteMemo extends CRM_Core_DAO {
         ) ,
         'description' => array(
           'name' => 'description',
-          'type' => CRM_Utils_Type::T_STRING,
+          'type' => CRM_Utils_Type::T_VARCHAR,
           'title' => ts('Description') ,
           'description' => 'credit note description',
           'table_name' => 'civicrm_creditnote_memo',
