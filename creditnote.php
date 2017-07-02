@@ -28,6 +28,23 @@ function creditnote_civicrm_xmlMenu(&$files) {
  * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_buildForm
  */
 function creditnote_civicrm_buildForm($formName, &$form) {
+  // Add batch list selector.
+  if (in_array($formName, array(
+    "CRM_Contribute_Form_Contribution",
+    "CRM_Member_Form_Membership",
+    "CRM_Event_Form_Participant",
+    "CRM_Contribute_Form_AdditionalPayment"
+  ))) {
+    if ($form->_mode) {
+      return FALSE;
+    }
+    if ($form->_flagSubmitted) {
+      $creditNote = CRM_Utils_Array::value('credit_note_id', $form->_submitValues);
+      if ($creditNote) {
+        $form->assign('creditNote', $creditNote);
+      }
+    }
+  }
   if ($formName == 'CRM_Financial_Form_Payment' && !empty($form->paymentInstrumentID)) {
     if (CRM_Utils_Array::value('financial_trxn_id', $form->_values)) {
       return NULL;
@@ -257,19 +274,58 @@ function creditnote_civicrm_validateForm($formName, &$fields, &$files, &$form, &
   }
 }
 
-function creditnote_civicrm_links($op, $objectName, &$objectId, &$links, &$mask = NULL, &$values = array()) {;
+function creditnote_civicrm_links($op, $objectName, &$objectId, &$links, &$mask = NULL, &$values = array()) {
   if ($op == 'contribution.selector.row' && $objectName == 'Contribution') {
     $contributionStatus = CRM_Core_DAO::getFieldValue('CRM_Contribute_BAO_Contribution', $objectId, 'contribution_status_id');
     $contributionStatus = CRM_Core_PseudoConstant::getName('CRM_Contribute_BAO_Contribution', 'contribution_status_id', $contributionStatus);
     if (in_array($contributionStatus, array('Refunded', 'Pending refund')) && !CRM_CreditNote_BAO_CreditNote::checkIdCreditNoteCreated($objectId)) {
       $links[] = array(
         'name' => ts('Create Credit Note'),
-	'url' => '',
-	'qs' => '',
+	'url' => 'civicrm/contribute/createCreditNote',
+	'qs' => "reset=1&contributionId={$objectId}",
 	'title' => ts('Create Credit Note'),
 	'ref' => " contribution-{$objectId}",
       );
     }
   }
+}
 
+/**
+ * Implements hook_civicrm_postProcess().
+ *
+ * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_postProcess
+ *
+ */
+function creditnote_civicrm_postProcess($formName, &$form) {
+  // Backoffice forms.
+  if (in_array($formName, array(
+    "CRM_Contribute_Form_Contribution",
+    "CRM_Member_Form_Membership",
+    "CRM_Event_Form_Participant",
+    "CRM_Contribute_Form_AdditionalPayment"
+  ))) {
+    $form->assign('creditNote', NULL);
+    $submitValues = $form->_submitValues;
+    CRM_CreditNote_BAO_CreditNote::processCreditNote($submitValues);
+  }
+}
+
+/**
+ * Implements hook_civicrm_postSave_table_name().
+ *
+ * @link https://docs.civicrm.org/dev/en/master/hooks/hook_civicrm_postSave_table_name/
+ *
+ */
+function creditnote_civicrm_postSave_civicrm_financial_trxn($dao) {
+  if ($dao->is_payment) {
+    $creditNote = CRM_Core_Smarty::singleton()->get_template_vars('creditNote');
+    if ($creditNote) {
+      CRM_CreditNote_BAO_CreditNote::createCreditNotePayment(
+        $creditNote,
+	$dao->id,
+	$dao->total_amount
+      );
+      CRM_Core_Smarty::singleton()->assign('creditNote', NULL);
+    }
+  }
 }
