@@ -33,26 +33,17 @@ function creditnote_civicrm_buildForm($formName, &$form) {
       return NULL;
     }
     if ($form->paymentInstrumentID == CRM_Core_PseudoConstant::getKey('CRM_Contribute_BAO_Contribution', 'payment_instrument_id', 'Credit Note')) {
-      $form->assign('paymentFields', array('credit_note_contact_id', 'credit_note_amount'));
+      $form->assign('paymentFields', array('credit_note_contact_id', 'credit_note_id'));
 
       // assign payment fields of Credit Note
       $form->addEntityRef('credit_note_contact_id', ts('Credit Note Contact'), array('api' => array('extra' => array('email'))));
-      $form->add('select', 'credit_note_amount',
+      $form->add('select', 'credit_note_id',
         ts('Credit Note Amount'),
         CRM_CreditNote_BAO_CreditNote::getCreditNotes(),
-        FALSE, array('class' => 'crm-select2', 'placeholder' => ts('- any -'))
+        TRUE, array('class' => 'crm-select2', 'placeholder' => ts('- any -'))
       );
     }
   }
-}
-
-// Function will return the list of CN amounts,
-// NOTE: Hardcoded values are passed for now to test UI changes
-function _getCreditNoteAmounts() {
-  return array(
-    'financial_trxn_id_1' => 'CN_112 : $125',
-    'financial_trxn_id_2' => 'CN_127 : $143',
-  );
 }
 
 /**
@@ -233,3 +224,35 @@ function creditnote_civicrm_navigationMenu(&$menu) {
   ));
   _creditnote_civix_navigationMenu($menu);
 } // */
+
+/**
+ * Implements hook_civicrm_navigationMenu().
+ *
+ * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_navigationMenu
+ *
+ */
+function creditnote_civicrm_validateForm($formName, &$fields, &$files, &$form, &$errors) {
+  if (in_array($formName, array(
+    "CRM_Contribute_Form_Contribution",
+    "CRM_Member_Form_Membership",
+    "CRM_Event_Form_Participant",
+  ))) {
+    if (in_array($formName, array(
+        "CRM_Member_Form_Membership",
+        "CRM_Event_Form_Participant",
+      ))
+      && !CRM_Utils_Array::value('record_contribution', $fields)
+    ) {
+      return FALSE;
+    }
+    $creditNote = CRM_Utils_Array::value('credit_note_id', $fields);
+    if ($creditNote) {
+      $creditNoteAmount = CRM_CreditNote_BAO_CreditNote::getCreditNoteAmount($creditNote);
+      $totalAmount = CRM_Utils_Array::value('credit_note_id', $fields);
+      $contributionStatus = CRM_Core_PseudoConstant::getName('CRM_Contribute_BAO_Contribution', 'contribution_status_id', $fields['contribution_status_id']);
+      if ($creditNoteAmount >= $totalAmount && $contributionStatus != 'Completed') {
+        $errors['contribution_status_id'] = ts('Contribution status should be completed because credit note amount is greater than total amount');
+      }
+    }
+  }
+}
