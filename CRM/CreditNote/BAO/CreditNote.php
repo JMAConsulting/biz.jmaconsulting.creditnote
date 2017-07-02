@@ -38,15 +38,18 @@ class CRM_CreditNote_BAO_CreditNote extends CRM_Core_DAO {
    * Function will return the list of CN amounts.
    */ 
   public static function getCreditNotes() {
-    $query = "SELECT ccm.id, ccm.contribution_id, ccm.amount, cc.currency
+    $query = "SELECT ccm.id, ccm.contribution_id, ccm.amount + (-SUM(IFNULL(cft.total_amount, 0))) as amount, cc.currency
       FROM civicrm_creditnote_memo ccm
         INNER JOIN  civicrm_contribution cc ON cc.id = ccm.contribution_id
-      WHERE amount > 0
+        LEFT JOIN civicrm_creditnote_memo_payment ccmp ON ccmp.creditnote_memo_id = ccm.id
+	LEFT JOIN civicrm_financial_trxn cft ON cft.id = ccmp.financial_trxn_id
+      GROUP BY cc.id
     ";
     $cnPrefix = CRM_Contribute_BAO_Contribution::checkContributeSettings('credit_notes_prefix');
     $dao = CRM_Core_DAO::executeQuery($query);
     $creditNotes = array();
     while ($dao->fetch()) {
+      if ($dao->amount <= 0) continue;
       $amount = CRM_Utils_Money::format($dao->amount, $dao->currency);
       $creditNotes[$dao->id] = "{$cnPrefix}{$dao->contribution_id} : {$amount}";
     }
@@ -54,7 +57,18 @@ class CRM_CreditNote_BAO_CreditNote extends CRM_Core_DAO {
   }
 
   public static function getCreditNoteAmount($creditNote) {
-    return 100;
+    if (!is_array($creditNote)) {
+      $creditNote = array($creditNote);
+    }
+    $creditNote = implode(',', $creditNote);
+    $query = "SELECT ccm.amount + (-SUM(IFNULL(cft.total_amount, 0))) as amount
+      FROM civicrm_creditnote_memo ccm
+        INNER JOIN  civicrm_contribution cc ON cc.id = ccm.contribution_id
+        LEFT JOIN civicrm_creditnote_memo_payment ccmp ON ccmp.creditnote_memo_id = ccm.id
+	LEFT JOIN civicrm_financial_trxn cft ON cft.id = ccmp.financial_trxn_id
+      WHERE ccm.id IN ($creditNote)
+    ";
+    return CRM_Core_DAO::singleValueQuery($query);
   }
 
   public static function addCreditNote($params) {
