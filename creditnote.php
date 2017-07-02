@@ -256,3 +256,20 @@ function creditnote_civicrm_validateForm($formName, &$fields, &$files, &$form, &
     }
   }
 }
+
+function creditnote_civicrm_links($op, $objectName, &$objectId, &$links, &$mask = NULL, &$values = array()) {;
+  if ($op == 'contribution.selector.row' && $objectName == 'Contribution') {
+    $contributionStatus = CRM_Core_DAO::getFieldValue('CRM_Contribute_BAO_Contribution', $objectId, 'contribution_status_id');
+    $contributionStatus = CRM_Core_PseudoConstant::getName('CRM_Contribute_BAO_Contribution', 'contribution_status_id', $contributionStatus);
+    if (in_array($contributionStatus, array('Refunded', 'Pending refund'))) {
+      $links[] = array(
+        'name' => ts('Create Credit Note'),
+	'url' => '',
+	'qs' => '',
+	'title' => ts('Create Credit Note'),
+	'ref' => " contribution-{$objectId}",
+      );
+    }
+  }
+
+}
