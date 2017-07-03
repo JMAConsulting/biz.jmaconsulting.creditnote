@@ -166,6 +166,9 @@ function creditnote_civicrm_managed(&$entities) {
   _creditnote_civix_civicrm_managed($entities);
 }
 
+/**
+ * Fetch payment instrument 'Credit Note'
+ */
 function _getCNPaymentInstrumentID() {
   $result = civicrm_api3('OptionValue', 'Get', array(
     'option_group_id' => 'payment_instrument',
