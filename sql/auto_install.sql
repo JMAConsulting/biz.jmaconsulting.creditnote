@@ -3,7 +3,7 @@ CREATE TABLE `civicrm_creditnote_memo` (
 
    `id` INT unsigned NOT NULL AUTO_INCREMENT ,
    `contribution_id` INT unsigned NOT NULL  COMMENT 'FK to Contribution ID' ,
-   `description` VARCHAR(255) NOT NULL COMMENT 'Credit note description' ,
+   `description` VARCHAR(255) COMMENT 'Credit note description' ,
    `amount` DECIMAL(20,2) NOT NULL COMMENT 'Total amount of this contribution. Use market value for non-monetary gifts.' ,
    `created_date` DATETIME NOT NULL COMMENT 'Credit Note created date' ,
 

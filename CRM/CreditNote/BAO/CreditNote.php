@@ -38,7 +38,7 @@ class CRM_CreditNote_BAO_CreditNote extends CRM_Core_DAO {
 
   /**
    * Function will return the list of CN amounts.
-   */ 
+   */
   public static function getCreditNotes() {
     $query = "SELECT ccm.id, ccm.contribution_id, ccm.amount + (-SUM(IFNULL(ccmp.amount, 0))) as amount, cc.currency
       FROM civicrm_creditnote_memo ccm
@@ -84,7 +84,7 @@ class CRM_CreditNote_BAO_CreditNote extends CRM_Core_DAO {
     CRM_Utils_Hook::post($op, 'CreditNoteMemo', $creditNoteMemo->id, $creditNoteMemo);
     return $creditNoteMemo;
   }
-  
+
   public static function addCreditNotePayments($params) {
     $op = 'edit';
     $entityId = CRM_Utils_Array::value('id', $params);
@@ -99,39 +99,29 @@ class CRM_CreditNote_BAO_CreditNote extends CRM_Core_DAO {
     return $creditNoteMemoPayment;
   }
 
-  public static function createCreditNote() {
-    $contributionId = CRM_Utils_Request::retrieve('contributionId', 'Positive');
-    $error = FALSE;
-    try {
-      $alreadyCreated = self::checkIdCreditNoteCreated($contributionId);
-      if ($alreadyCreated) {
-        require_once 'api/Exception.php';
-        throw new CiviCRM_API3_Exception(ts('Credit Note is already created for this contribution.'), 'undefined', array());
-      }
-      $contribution = civicrm_api3('Contribution', 'getSingle', array(
-        'return' => array("total_amount", 'contribution_status_id'),
-	'id' => $contributionId,
-	'contribution_status_id' => array('IN' => array('Refunded', 'Pending refund')),
-      ));
-      $contributionStatus = CRM_Core_PseudoConstant::getName('CRM_Contribute_BAO_Contribution', 'contribution_status_id', $contribution['contribution_status_id']);
-      if ($contributionStatus == 'Refunded') {
-        $creditNoteAmount = $contribution['total_amount'];
-      }
-      else {
-        $paidAmount = CRM_Core_BAO_FinancialTrxn::getPartialPaymentWithType($contributionId, 'contribution', TRUE, $contribution['total_amount']);
-        $creditNoteAmount = CRM_Utils_Array::value('refund_due', $paidAmount);
-      }
-      if (!empty($creditNoteAmount)) {
-        $params = array(
-          'contribution_id' => $contributionId,
-	  'created_date' => date('Ymd'),
-	  'amount' => abs($creditNoteAmount),
-        );
-        self::addCreditNote($params);
-      }
+  public static function createCreditNote($contributionId) {
+    $contribution = civicrm_api3('Contribution', 'getSingle', array(
+      'return' => array("total_amount", 'contribution_status_id'),
+      'id' => $contributionId,
+      'contribution_status_id' => array('IN' => array('Refunded', 'Pending refund')),
+    ));
+    $contributionStatus = CRM_Core_PseudoConstant::getName('CRM_Contribute_BAO_Contribution', 'contribution_status_id', $contribution['contribution_status_id']);
+
+    if ($contributionStatus == 'Refunded') {
+      $creditNoteAmount = $contribution['total_amount'];
     }
-    catch (CiviCRM_API3_Exception $e) {
-      $error = TRUE;
+    else {
+      $paidAmount = CRM_Core_BAO_FinancialTrxn::getPartialPaymentWithType($contributionId, 'contribution', TRUE, $contribution['total_amount']);
+      $creditNoteAmount = CRM_Utils_Array::value('refund_due', $paidAmount);
+    }
+
+    if (!empty($creditNoteAmount)) {
+      $params = array(
+        'contribution_id' => $contributionId,
+        'created_date' => date('Ymd'),
+        'amount' => abs($creditNoteAmount),
+      );
+      self::addCreditNote($params);
     }
   }
 
@@ -146,21 +136,21 @@ class CRM_CreditNote_BAO_CreditNote extends CRM_Core_DAO {
         $contributionId = CRM_Core_DAO::getFieldValue('CRM_CreditNote_DAO_CreditNoteMemo', $creditNoteId, 'contribution_id');
         $contribution = civicrm_api3('Contribution', 'getSingle', array(
           'return' => array("total_amount", 'currency', 'contribution_status_id', 'financial_type_id', 'payment_instrument_id'),
-	  'id' => $contributionId,
-	));
+	         'id' => $contributionId,
+	      ));
         $trxnParams = array(
-	  'contribution_id' => $contributionId,
-	  'is_payment' => 1,
-	  'total_amount' => -$creditNoteDetails['amount'],
-	  'net_amount' => -$creditNoteDetails['amount'],
-	  'from_financial_account_id' => self::getFromAccountId($contribution),
-	  'to_financial_account_id' => CRM_Financial_BAO_FinancialTypeAccount::getInstrumentFinancialAccount($paymentInstrument),
-	  'trxn_date' => date('Ymd'),
-	  'currency' => $contribution['currency'],
-	  'status_id' => CRM_Core_PseudoConstant::getKey('CRM_Contribute_BAO_Contribution', 'contribution_status_id', 'Completed'),
-	  'payment_instrument_id' => $paymentInstrument,
-	);
-	$ftDao = CRM_Core_BAO_FinancialTrxn::create($trxnParams);
+          'contribution_id' => $contributionId,
+          'is_payment' => 1,
+	        'total_amount' => -$creditNoteDetails['amount'],
+	        'net_amount' => -$creditNoteDetails['amount'],
+	        'from_financial_account_id' => self::getFromAccountId($contribution),
+	        'to_financial_account_id' => CRM_Financial_BAO_FinancialTypeAccount::getInstrumentFinancialAccount($paymentInstrument),
+	        'trxn_date' => date('Ymd'),
+	        'currency' => $contribution['currency'],
+	        'status_id' => CRM_Core_PseudoConstant::getKey('CRM_Contribute_BAO_Contribution', 'contribution_status_id', 'Completed'),
+	        'payment_instrument_id' => $paymentInstrument,
+	      );
+	      $ftDao = CRM_Core_BAO_FinancialTrxn::create($trxnParams);
 
 	// store financial item Proportionaly.
 	$trxnParams = array(
@@ -181,7 +171,7 @@ class CRM_CreditNote_BAO_CreditNote extends CRM_Core_DAO {
     foreach ($creditNotes as $creditNoteId => $creditNoteAmount) {
       $params = array(
         'creditnote_memo_id' => $creditNoteId,
-	'financial_trxn_id' => $financialTrxnId,
+        'financial_trxn_id' => $financialTrxnId,
       );
       if ($creditNoteAmount > $amount) {
         $params['amount'] = $amount;

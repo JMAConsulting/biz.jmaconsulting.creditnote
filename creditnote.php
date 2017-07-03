@@ -284,10 +284,11 @@ function creditnote_civicrm_links($op, $objectName, &$objectId, &$links, &$mask 
     if (in_array($contributionStatus, array('Refunded', 'Pending refund')) && !CRM_CreditNote_BAO_CreditNote::checkIdCreditNoteCreated($objectId)) {
       $links[] = array(
         'name' => ts('Create Credit Note'),
-	'url' => 'civicrm/contribute/createCreditNote',
-	'qs' => "reset=1&contributionId={$objectId}",
-	'title' => ts('Create Credit Note'),
-	'ref' => " contribution-{$objectId}",
+        'url' => 'civicrm/contribute/createCreditNote',
+	      'qs' => "reset=1&contribution_id={$objectId}&action=add",
+	      'title' => ts('Create Credit Note'),
+	      'ref' => " contribution-{$objectId}",
+        'class' => "small-popup",
       );
     }
   }
