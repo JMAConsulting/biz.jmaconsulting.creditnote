@@ -50,8 +50,7 @@ function creditnote_civicrm_buildForm($formName, &$form) {
       return NULL;
     }
     $paymentInstrumentName = CRM_Core_PseudoConstant::getName('CRM_Contribute_BAO_Contribution', 'payment_instrument_id', $form->paymentInstrumentID);
-    			   CRM_Core_Error::debug_var( '$paymentInstrumentName', $paymentInstrumentName );
-    if ('Credit Note' == $paymentInstrumentName) {
+    if ('Credit Note' == substr($paymentInstrumentName, 0, 11)) {
       $form->assign('paymentFields', array('credit_note_contact_id', 'credit_note_id'));
 
       // assign payment fields of Credit Note
