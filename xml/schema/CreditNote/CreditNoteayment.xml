@@ -2,8 +2,8 @@
 
 <table>
   <base>CRM/CreditNote</base>
-  <class>CreditNoteMemoPayment</class>
-  <name>civicrm_creditnote_memo_payment</name>
+  <class>CreditNotePayment</class>
+  <name>civicrm_creditnote_payment</name>
   <comment></comment>
   <log>true</log>
   <field>
@@ -17,14 +17,14 @@
     <autoincrement>true</autoincrement>
   </primaryKey>
   <field>
-    <name>creditnote_memo_id</name>
+    <name>contribution_id</name>
     <type>int unsigned</type>
     <required>true</required>
-    <comment>FK to CreditNote Memo ID</comment>
+    <comment>FK to Contribution ID of credit note</comment>
   </field>
   <foreignKey>
-    <name>creditnote_memo_id</name>
-    <table>civicrm_creditnote_memo</table>
+    <name>contribution_id</name>
+    <table>civicrm_contribution</table>
     <key>id</key>
     <onDelete>CASCADE</onDelete>
   </foreignKey>
@@ -44,8 +44,7 @@
     <type>decimal</type>
     <required>true</required>
     <import>true</import>
-    <comment>Total amount of this contribution. Use market value for non-monetary gifts.</comment>
-    <comment>credit note description</comment>
+    <comment>Amount used from credit note.</comment>
     <html>
      <type>Text</type>
    </html>

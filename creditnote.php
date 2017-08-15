@@ -49,7 +49,9 @@ function creditnote_civicrm_buildForm($formName, &$form) {
     if (CRM_Utils_Array::value('financial_trxn_id', $form->_values)) {
       return NULL;
     }
-    if ($form->paymentInstrumentID == CRM_Core_PseudoConstant::getKey('CRM_Contribute_BAO_Contribution', 'payment_instrument_id', 'Credit Note')) {
+    $paymentInstrumentName = CRM_Core_PseudoConstant::getName('CRM_Contribute_BAO_Contribution', 'payment_instrument_id', $form->paymentInstrumentID);
+    			   CRM_Core_Error::debug_var( '$paymentInstrumentName', $paymentInstrumentName );
+    if ('Credit Note' == $paymentInstrumentName) {
       $form->assign('paymentFields', array('credit_note_contact_id', 'credit_note_id'));
 
       // assign payment fields of Credit Note
@@ -268,28 +270,11 @@ function creditnote_civicrm_validateForm($formName, &$fields, &$files, &$form, &
     $creditNote = CRM_Utils_Array::value('credit_note_id', $fields);
     if ($creditNote) {
       $creditNoteAmount = CRM_CreditNote_BAO_CreditNote::getCreditNoteAmount($creditNote);
-      $totalAmount = CRM_Utils_Array::value('credit_note_id', $fields);
+      $totalAmount = CRM_Utils_Array::value('total_amount', $fields);
       $contributionStatus = CRM_Core_PseudoConstant::getName('CRM_Contribute_BAO_Contribution', 'contribution_status_id', $fields['contribution_status_id']);
       if ($creditNoteAmount >= $totalAmount && $contributionStatus != 'Completed') {
-        $errors['contribution_status_id'] = ts('Contribution status should be completed because credit note amount is greater than total amount');
+        $errors['contribution_status_id'] = ts('Contribution status should be completed because credit note amount is greater than total amount.');
       }
-    }
-  }
-}
-
-function creditnote_civicrm_links($op, $objectName, &$objectId, &$links, &$mask = NULL, &$values = array()) {
-  if ($op == 'contribution.selector.row' && $objectName == 'Contribution') {
-    $contributionStatus = CRM_Core_DAO::getFieldValue('CRM_Contribute_BAO_Contribution', $objectId, 'contribution_status_id');
-    $contributionStatus = CRM_Core_PseudoConstant::getName('CRM_Contribute_BAO_Contribution', 'contribution_status_id', $contributionStatus);
-    if (in_array($contributionStatus, array('Refunded', 'Pending refund')) && !CRM_CreditNote_BAO_CreditNote::checkIdCreditNoteCreated($objectId)) {
-      $links[] = array(
-        'name' => ts('Create Credit Note'),
-        'url' => 'civicrm/contribute/createCreditNote',
-	      'qs' => "reset=1&contribution_id={$objectId}&action=add",
-	      'title' => ts('Create Credit Note'),
-	      'ref' => " contribution-{$objectId}",
-        'class' => "small-popup",
-      );
     }
   }
 }
@@ -349,7 +334,7 @@ function creditnote_civicrm_pre($op, $objectName, &$objectId, &$params) {
     }
     if ($creditNote) {
       $creditNoteAmount = CRM_CreditNote_BAO_CreditNote::getCreditNoteAmount($creditNote);
-      if ($creditNoteAmount < $params['total_amount']) {
+      if ($creditNoteAmount > 0 && $creditNoteAmount < $params['total_amount']) {
         $params['partial_payment_total'] = $params['total_amount'];
         $params['partial_amount_to_pay'] = $creditNoteAmount;
         $params['contribution_status_id'] = CRM_Core_PseudoConstant::getKey('CRM_Contribute_BAO_Contribution', 'contribution_status_id', 'Partially paid');
