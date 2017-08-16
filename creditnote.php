@@ -225,9 +225,20 @@ function creditnote_civicrm_alterSettingsFolders(&$metaDataFolders = NULL) {
  *
  * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_preProcess
  *
+ */
 function creditnote_civicrm_preProcess($formName, &$form) {
-
-} // */
+  if ($formName == 'CRM_Admin_Form_Preferences_Contribute') {
+    $settings = $form->getVar('_settings');
+    $contributeSettings = array();
+    foreach ($settings as $key => $setting) {
+      $contributeSettings[$key] = $setting;
+      if ($key == 'acl_financial_type') {
+        $contributeSettings['enable_credit_note_for_status'] = CRM_Core_BAO_Setting::CONTRIBUTE_PREFERENCES_NAME;
+      }
+    }
+    $form->setVar('_settings', $contributeSettings);
+  }
+}
 
 /**
  * Implements hook_civicrm_navigationMenu().
@@ -354,4 +365,39 @@ function creditnote_civicrm_pre($op, $objectName, &$objectId, &$params) {
       }
     }
   }
+}
+
+/**
+ * Implements hook_civicrm_alterSettingsMetaData().
+ *
+ * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_alterSettingsMetaData
+ *
+ */
+function creditnote_civicrm_alterSettingsMetaData(&$settingsMetadata, $domainID, $profile) {
+  $contributionStatus = array(
+    CRM_Core_PseudoConstant::getKey('CRM_Contribute_BAO_Contribution', 'contribution_status_id', 'Pending refund'),
+    CRM_Core_PseudoConstant::getKey('CRM_Contribute_BAO_Contribution', 'contribution_status_id', 'Refunded'),
+    CRM_Core_PseudoConstant::getKey('CRM_Contribute_BAO_Contribution', 'contribution_status_id', 'Cancelled'),
+  );
+  $contributionStatusLabels = CRM_Core_PseudoConstant::get('CRM_Contribute_BAO_Contribution', 'contribution_status_id');
+  $settingsMetadata['enable_credit_note_for_status'] = array(
+    'group_name' => 'Contribute Preferences',
+    'group' => 'contribute',
+    'name' => 'enable_credit_note_for_status',
+    'type' => 'Integer',
+    'html_type' => 'select',
+    'quick_form_type' => 'Element',
+    'default' => CRM_Core_PseudoConstant::getKey('CRM_Contribute_BAO_Contribution', 'contribution_status_id', 'Pending refund'),
+    'add' => '4.7',
+    'html_attributes' => array(
+      'multiple' => 1,
+      'class' => 'crm-select2',
+    ),
+    'title' => 'Enable credit note for contribution status?',
+    'option_values' => array_intersect_key($contributionStatusLabels, array_flip($contributionStatus)),
+    'is_domain' => 1,
+    'is_contact' => 0,
+    'description' => '',
+    'help_text' => '',
+  );
 }
