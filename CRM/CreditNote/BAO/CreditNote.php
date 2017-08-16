@@ -142,12 +142,12 @@ class CRM_CreditNote_BAO_CreditNote extends CRM_Core_DAO {
           'contribution_id' => $contributionId,
         );
 	CRM_Contribute_BAO_Contribution::assignProportionalLineItems($trxnParams, $ftDao->id, $contribution['total_amount']);
-      }
-      if ($status == 'Pending refund') {
-        $paymentBalance = CRM_Core_BAO_FinancialTrxn::getPartialPaymentWithType($creditNoteId, 'contribution', FALSE, $contribution['total_amount']);
-        if ($paymentBalance == 0) {
-          $statusId = CRM_Core_PseudoConstant::getKey('CRM_Contribute_BAO_Contribution', 'contribution_status_id', 'Completed');
-          CRM_Core_DAO::setFieldValue('CRM_Contribute_BAO_Contribution', $creditNoteId, 'contribution_status_id', $statusId);
+        if ($status == 'Pending refund') {
+          $paymentBalance = CRM_Core_BAO_FinancialTrxn::getPartialPaymentWithType($creditNoteId, 'contribution', FALSE, $contribution['total_amount']);
+          if ($paymentBalance == 0) {
+            $statusId = CRM_Core_PseudoConstant::getKey('CRM_Contribute_BAO_Contribution', 'contribution_status_id', 'Completed');
+            CRM_Core_DAO::setFieldValue('CRM_Contribute_BAO_Contribution', $creditNoteId, 'contribution_status_id', $statusId);
+          }
         }
       }
       self::$_processedCreditNotes = NULL;
