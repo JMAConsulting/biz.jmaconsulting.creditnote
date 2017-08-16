@@ -257,6 +257,7 @@ function creditnote_civicrm_validateForm($formName, &$fields, &$files, &$form, &
     "CRM_Contribute_Form_Contribution",
     "CRM_Member_Form_Membership",
     "CRM_Event_Form_Participant",
+    "CRM_Contribute_Form_AdditionalPayment",
   ))) {
     if (in_array($formName, array(
         "CRM_Member_Form_Membership",
@@ -270,6 +271,12 @@ function creditnote_civicrm_validateForm($formName, &$fields, &$files, &$form, &
     if ($creditNote) {
       $creditNoteAmount = CRM_CreditNote_BAO_CreditNote::getCreditNoteAmount($creditNote);
       $totalAmount = CRM_Utils_Array::value('total_amount', $fields);
+      if ('CRM_Contribute_Form_AdditionalPayment' == $formName) {
+        if ($totalAmount > $creditNoteAmount) {
+          $errors['total_amount'] = ts("Total amount cannot be more than sum of selected credit note amount.");
+        }
+        return NULL;
+      }
       $contributionStatus = CRM_Core_PseudoConstant::getName('CRM_Contribute_BAO_Contribution', 'contribution_status_id', $fields['contribution_status_id']);
       if ($creditNoteAmount >= $totalAmount && $contributionStatus != 'Completed') {
         $errors['contribution_status_id'] = ts('Contribution status should be completed because credit note amount is greater than total amount.');
