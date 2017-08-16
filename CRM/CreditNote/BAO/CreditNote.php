@@ -48,8 +48,7 @@ class CRM_CreditNote_BAO_CreditNote extends CRM_Core_DAO {
       $where = " AND cc.contact_id = {$contactID}";
     }
     $query = "SELECT * FROM (
-        SELECT temp1.id, temp1.currency,  (temp1.balance_amount - SUM(IFNULL(ccp.amount, 0))) as credit_note_amount FROM (
-          SELECT cc.id, cc.currency, IF (cc.contribution_status_id = {$pendingRefundStatusID}, (SUM(cft.total_amount)- cc.total_amount), cc.total_amount) as balance_amount
+        SELECT cc.id, cc.currency, (SUM(cft.total_amount)- cc.total_amount) as credit_note_amount
           FROM `civicrm_contribution` cc
             INNER JOIN civicrm_entity_financial_trxn ceft ON ceft.entity_id = cc.id
               AND ceft.entity_table = 'civicrm_contribution'
@@ -57,19 +56,15 @@ class CRM_CreditNote_BAO_CreditNote extends CRM_Core_DAO {
               AND cft.is_payment = 1
           WHERE contribution_status_id IN (3, 7, 9) {$where}
           GROUP BY cc.id
-        ) as temp1
-        LEFT JOIN civicrm_creditnote_payment ccp ON ccp.contribution_id = temp1.id
-        GROUP BY temp1.id
-      ) as temp2 where credit_note_amount > 0
+        ) as temp where credit_note_amount <> 0
       ORDER BY credit_note_amount
     ";
     $cnPrefix = CRM_Contribute_BAO_Contribution::checkContributeSettings('credit_notes_prefix');
     $dao = CRM_Core_DAO::executeQuery($query);
     $creditNotes = array();
     while ($dao->fetch()) {
-      if ($dao->credit_note_amount <= 0) continue;
-      self::$_creditNotes[$dao->id] = $dao->credit_note_amount;
-      $amount = CRM_Utils_Money::format($dao->credit_note_amount, $dao->currency);
+      self::$_creditNotes[$dao->id] = abs($dao->credit_note_amount);
+      $amount = CRM_Utils_Money::format(abs($dao->credit_note_amount), $dao->currency);
       $creditNotes[$dao->id] = "{$cnPrefix}{$dao->id} : {$amount}";
     }
     return $creditNotes;
@@ -115,11 +110,16 @@ class CRM_CreditNote_BAO_CreditNote extends CRM_Core_DAO {
           'return' => array("total_amount", 'currency', 'contribution_status_id', 'financial_type_id', 'payment_instrument_id'),
 	  'id' => $contributionId,
 	));
+	$amount = $creditNoteDetails['amount'];
+	$status = CRM_Core_PseudoConstant::getName('CRM_Contribute_BAO_Contribution', 'contribution_status_id', $contribution['contribution_status_id']);
+	if ($status == 'Pending refund') {
+	  $amount = -1 * $amount;
+        }
         $trxnParams = array(
           'contribution_id' => $contributionId,
           'is_payment' => 1,
-	  'total_amount' => -$creditNoteDetails['amount'],
-	  'net_amount' => -$creditNoteDetails['amount'],
+	  'total_amount' => $amount,
+	  'net_amount' => $amount,
 	  'from_financial_account_id' => self::getFromAccountId($contribution),
 	  'to_financial_account_id' => CRM_Financial_BAO_FinancialTypeAccount::getInstrumentFinancialAccount($paymentInstrument),
 	  'trxn_date' => date('YmdHis'),
