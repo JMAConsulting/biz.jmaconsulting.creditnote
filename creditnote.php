@@ -98,7 +98,8 @@ function creditnote_civicrm_buildForm($formName, &$form) {
     "CRM_Contribute_Form_Contribution",
     "CRM_Member_Form_Membership",
     "CRM_Event_Form_Participant",
-    "CRM_Contribute_Form_AdditionalPayment"
+    "CRM_Contribute_Form_AdditionalPayment",
+    "CRM_Member_Form_MembershipRenewal",
   ))) {
     if ($form->_mode) {
       return FALSE;
@@ -108,6 +109,22 @@ function creditnote_civicrm_buildForm($formName, &$form) {
       if ($creditNote) {
         $form->assign('creditNote', $creditNote);
       }
+    }
+    if ('CRM_Contribute_Form_AdditionalPayment' == $formName && $form->getVar('_refund')) {
+      $form->removeElement('payment_instrument_id');
+      $paymentInstrument = CRM_Contribute_PseudoConstant::paymentInstrument();
+      $paymentInstrumentByName = CRM_Contribute_BAO_Contribution::buildOptions('payment_instrument_id', 'validate');
+      foreach ($paymentInstrumentByName as $key => $value) {
+        if ('Credit Note' == substr($value, 0, 11)) {
+	  unset($paymentInstrumentByName[$key]);
+	}
+      }
+      $paymentInstrument = array_intersect_key($paymentInstrument, $paymentInstrumentByName);
+      $form->add('select', 'payment_instrument_id',
+        ts('Payment Method'),
+        array('' => ts('- select -')) + $paymentInstrument,
+        TRUE
+      );
     }
   }
   if ($formName == 'CRM_Financial_Form_Payment' && !empty($form->paymentInstrumentID)) {
@@ -334,6 +351,7 @@ function creditnote_civicrm_validateForm($formName, &$fields, &$files, &$form, &
     "CRM_Member_Form_Membership",
     "CRM_Event_Form_Participant",
     "CRM_Contribute_Form_AdditionalPayment",
+    "CRM_Member_Form_MembershipRenewal",
   ))) {
     if (in_array($formName, array(
         "CRM_Member_Form_Membership",
@@ -380,7 +398,8 @@ function creditnote_civicrm_postProcess($formName, &$form) {
     "CRM_Contribute_Form_Contribution",
     "CRM_Member_Form_Membership",
     "CRM_Event_Form_Participant",
-    "CRM_Contribute_Form_AdditionalPayment"
+    "CRM_Contribute_Form_AdditionalPayment",
+    "CRM_Member_Form_MembershipRenewal",
   ))) {
     $form->assign('creditNote', NULL);
     $submitValues = $form->_submitValues;
