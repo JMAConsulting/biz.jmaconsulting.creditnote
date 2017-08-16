@@ -267,6 +267,13 @@ function creditnote_civicrm_validateForm($formName, &$fields, &$files, &$form, &
     ) {
       return FALSE;
     }
+    $paymentInstrument = CRM_Utils_Array::value('payment_instrument_id', $fields);
+    if ($paymentInstrument) {
+      $paymentInstrumentName = CRM_Core_PseudoConstant::getName('CRM_Contribute_BAO_Contribution', 'payment_instrument_id', $paymentInstrument);
+      if ('Credit Note' == substr($paymentInstrumentName, 0, 11) && empty($fields['credit_note_id'])) {
+        $errors['_qf_default'] = ts("Please select Credit Note Amount.");
+      }
+    }
     $creditNote = CRM_Utils_Array::value('credit_note_id', $fields);
     if ($creditNote) {
       $creditNoteAmount = CRM_CreditNote_BAO_CreditNote::getCreditNoteAmount($creditNote);
