@@ -321,6 +321,17 @@ function creditnote_civicrm_postProcess($formName, &$form) {
     $submitValues = $form->_submitValues;
     CRM_CreditNote_BAO_CreditNote::processCreditNote($submitValues);
   }
+  // Component settings form.
+  if ($formName == 'CRM_Admin_Form_Preferences_Contribute') {
+    // Save the individual settings.
+    $params = $form->_submitValues;
+    $easyBatchParams = array(
+      'enable_credit_note_for_status',
+    );
+    foreach ($easyBatchParams as $field) {
+      Civi::settings()->set($field, CRM_Utils_Array::value($field, $params, 0));
+    }
+  }
 }
 
 /**

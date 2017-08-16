@@ -42,6 +42,13 @@ class CRM_CreditNote_BAO_CreditNote extends CRM_Core_DAO {
    * Function will return the list of CN amounts.
    */
   public static function getCreditNotes($contactID = NULL) {
+    $status = Civi::settings()->get('enable_credit_note_for_status');
+    if (empty($status)) {
+      return array();
+    }
+    elseif (!is_array($status)) {
+      $status = array($status);
+    }
     $pendingRefundStatusID = CRM_Core_PseudoConstant::getKey('CRM_Contribute_BAO_Contribution', 'contribution_status_id', 'Pending refund');
     $where = '';
     if ($contactID) {
@@ -54,7 +61,7 @@ class CRM_CreditNote_BAO_CreditNote extends CRM_Core_DAO {
               AND ceft.entity_table = 'civicrm_contribution'
             INNER JOIN civicrm_financial_trxn cft ON cft.id = ceft.financial_trxn_id
               AND cft.is_payment = 1
-          WHERE contribution_status_id IN (3, 7, 9) {$where}
+          WHERE contribution_status_id IN (" . implode(',', $status) . ") {$where}
           GROUP BY cc.id
         ) as temp where credit_note_amount <> 0
       ORDER BY credit_note_amount
