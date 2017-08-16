@@ -28,7 +28,37 @@ function creditnote_civicrm_xmlMenu(&$files) {
  * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_buildForm
  */
 function creditnote_civicrm_buildForm($formName, &$form) {
-  // Add batch list selector.
+  if ('CRM_Contribute_Form_ContributionView' == $formName) {
+    $contributionId = $form->get('id');
+    $query = "SELECT cc.id, cc.contact_id, cont.display_name,
+         cc1.id from_c_id, cc1.contact_id from_con_id, cont1.display_name from_name
+      FROM civicrm_creditnote_payment ccp
+        INNER JOIN civicrm_entity_financial_trxn ceft ON ceft.financial_trxn_id = ccp.financial_trxn_id
+          AND ceft.entity_table = 'civicrm_contribution'
+        INNER JOIN civicrm_contribution cc on cc.id = ceft.entity_id
+        INNER JOIN civicrm_contact cont ON cont.id = cc.contact_id
+        INNER JOIN civicrm_contribution cc1 on cc1.id = ccp.contribution_id
+        INNER JOIN civicrm_contact cont1 ON cont1.id = cc1.contact_id
+      WHERE (ccp.contribution_id = {$contributionId} or cc.id = {$contributionId})
+      GROUP BY cc.id
+    ";
+    $dao = CRM_Core_DAO::executeQuery($query);
+    $usedFor = $usedFrom = array();
+    while ($dao->fetch()) {
+      if ($dao->id == $contributionId) {
+        $usedFrom[$dao->from_con_id] = '<a href=' . CRM_Utils_System::url('civicrm/contact/view/contribution', "reset=1&id={$dao->from_c_id}&cid={$dao->from_con_id}&action=view") . ">{$dao->from_name}</a>";
+      }
+      else {
+        $usedFor[$dao->contact_id] = '<a href=' . CRM_Utils_System::url('civicrm/contact/view/contribution', "reset=1&id={$dao->id}&cid={$dao->contact_id}&action=view") . ">{$dao->display_name}</a>";
+      }
+    }
+    $form->assign('usedFor', implode('<br>', $usedFor));
+    $form->assign('usedFrom', implode('<br>', $usedFrom));
+    CRM_Core_Region::instance('page-body')->add(array(
+      'template' => 'CRM/Contribute/Form/ContributionViewExtra.tpl',
+    ));
+  }
+
   if (in_array($formName, array(
     "CRM_Contribute_Form_Contribution",
     "CRM_Member_Form_Membership",
