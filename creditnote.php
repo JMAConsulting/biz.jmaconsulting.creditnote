@@ -355,6 +355,27 @@ function creditnote_civicrm_postSave_civicrm_financial_trxn($dao) {
 }
 
 /**
+ * Implements hook_civicrm_postSave_table_name().
+ *
+ * @link https://docs.civicrm.org/dev/en/master/hooks/hook_civicrm_postSave_table_name/
+ *
+ */
+function creditnote_civicrm_postSave_civicrm_contribution($dao) {
+  if ($dao->contribution_status_id && !$dao->creditnote_id) {
+    $contributionStatus = CRM_Core_PseudoConstant::getName('CRM_Contribute_BAO_Contribution', 'contribution_status_id', $dao->contribution_status_id);
+    if ($contributionStatus == 'Pending refund') {
+      $creditNote = CRM_Core_DAO::getFieldValue('CRM_Contribute_DAO_Contribution',
+        $dao->id, 'creditnote_id'
+      );
+      if (!$creditNote) {
+        $dao->creditnote_id = CRM_Contribute_BAO_Contribution::createCreditNoteId();
+	$dao->save();
+      }
+    }
+  }
+}
+
+/**
  * Implements hook_civicrm_pre().
  *
  * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_pre
