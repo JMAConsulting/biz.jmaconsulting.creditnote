@@ -1,5 +1,5 @@
 
- CREATE TABLE `civicrm_creditnote_memo_payment` (
+ CREATE TABLE `civicrm_creditnote_payment` (
 
     `id` INT unsigned NOT NULL AUTO_INCREMENT ,
     `contribution_id` INT unsigned NOT NULL COMMENT 'FK to Contribution ID of credit note' ,

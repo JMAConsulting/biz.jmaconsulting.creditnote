@@ -36,24 +36,41 @@ class CRM_CreditNote_BAO_CreditNote extends CRM_Core_DAO {
 
   public static $_processedCreditNotes = NULL;
 
+  public static $_creditNotes = NULL;
+
   /**
    * Function will return the list of CN amounts.
    */
-  public static function getCreditNotes() {
-  return array(1=>'222');
-    $query = "SELECT ccm.id, ccm.contribution_id, ccm.amount + (-SUM(IFNULL(ccmp.amount, 0))) as amount, cc.currency
-      FROM civicrm_creditnote_memo ccm
-        INNER JOIN  civicrm_contribution cc ON cc.id = ccm.contribution_id
-        LEFT JOIN civicrm_creditnote_memo_payment ccmp ON ccmp.creditnote_memo_id = ccm.id
-      GROUP BY cc.id
+  public static function getCreditNotes($contactID = NULL) {
+    $pendingRefundStatusID = CRM_Core_PseudoConstant::getKey('CRM_Contribute_BAO_Contribution', 'contribution_status_id', 'Pending refund');
+    $where = '';
+    if ($contactID) {
+      $where = " AND cc.contact_id = {$contactID}";
+    }
+    $query = "SELECT * FROM (
+        SELECT temp1.id, temp1.currency,  (temp1.balance_amount - SUM(IFNULL(ccp.amount, 0))) as credit_note_amount FROM (
+          SELECT cc.id, cc.currency, IF (cc.contribution_status_id = {$pendingRefundStatusID}, (SUM(cft.total_amount)- cc.total_amount), cc.total_amount) as balance_amount
+          FROM `civicrm_contribution` cc
+            INNER JOIN civicrm_entity_financial_trxn ceft ON ceft.entity_id = cc.id
+              AND ceft.entity_table = 'civicrm_contribution'
+            INNER JOIN civicrm_financial_trxn cft ON cft.id = ceft.financial_trxn_id
+              AND cft.is_payment = 1
+          WHERE contribution_status_id IN (3, 7, 9) {$where}
+          GROUP BY cc.id
+        ) as temp1
+        LEFT JOIN civicrm_creditnote_payment ccp ON ccp.contribution_id = temp1.id
+        GROUP BY temp1.id
+      ) as temp2 where credit_note_amount > 0
+      ORDER BY credit_note_amount
     ";
     $cnPrefix = CRM_Contribute_BAO_Contribution::checkContributeSettings('credit_notes_prefix');
     $dao = CRM_Core_DAO::executeQuery($query);
     $creditNotes = array();
     while ($dao->fetch()) {
-      if ($dao->amount <= 0) continue;
-      $amount = CRM_Utils_Money::format($dao->amount, $dao->currency);
-      $creditNotes[$dao->id] = "{$cnPrefix}{$dao->contribution_id} : {$amount}";
+      if ($dao->credit_note_amount <= 0) continue;
+      self::$_creditNotes[$dao->id] = $dao->credit_note_amount;
+      $amount = CRM_Utils_Money::format($dao->credit_note_amount, $dao->currency);
+      $creditNotes[$dao->id] = "{$cnPrefix}{$dao->id} : {$amount}";
     }
     return $creditNotes;
   }
@@ -62,14 +79,14 @@ class CRM_CreditNote_BAO_CreditNote extends CRM_Core_DAO {
     if (!is_array($creditNote)) {
       $creditNote = array($creditNote);
     }
-    $creditNote = implode(',', $creditNote);
-    $query = "SELECT ccm.amount + (-SUM(IFNULL(ccmp.amount, 0))) as amount
-      FROM civicrm_creditnote_memo ccm
-        INNER JOIN  civicrm_contribution cc ON cc.id = ccm.contribution_id
-        LEFT JOIN civicrm_creditnote_memo_payment ccmp ON ccmp.creditnote_memo_id = ccm.id
-      WHERE ccm.id IN ($creditNote)
-    ";
-    return CRM_Core_DAO::singleValueQuery($query);
+    if (empty(self::$_creditNotes)) {
+      self::getCreditNotes();
+    }
+    $creditNoteAmount = 0;
+    foreach ($creditNote as $id) {
+      $creditNoteAmount += CRM_Utils_Array::value($id, self::$_creditNotes, 0);
+    }
+    return $creditNoteAmount;
   }
 
   public static function addCreditNotePayments($params) {
@@ -146,20 +163,13 @@ class CRM_CreditNote_BAO_CreditNote extends CRM_Core_DAO {
     }
   }
 
-  public static function getCreditNoteDetails ($creditNotes) {
-    $creditNote = implode(',', $creditNotes);
-    $query = "SELECT id, amount FROM (SELECT ccm.id, ccm.amount + (-SUM(IFNULL(ccmp.amount, 0))) as amount
-      FROM civicrm_creditnote_memo ccm
-        INNER JOIN  civicrm_contribution cc ON cc.id = ccm.contribution_id
-        LEFT JOIN civicrm_creditnote_memo_payment ccmp ON ccmp.creditnote_memo_id = ccm.id
-      WHERE ccm.id IN ($creditNote)
-      GROUP BY cc.id) as temp WHERE amount > 0 ORDER BY amount
-    ";
-    $dao = CRM_Core_DAO::executeQuery($query);
-    $creditNotes = array();
-    while ($dao->fetch()) {
-      if ($dao->amount <= 0) continue;
-      $creditNotes[$dao->id] = $dao->amount;
+  public static function getCreditNoteDetails ($creditNotesIds) {
+    $creditNotes =  array();
+    if (empty(self::$_creditNotes)) {
+      self::getCreditNotes();
+    }
+    foreach ($creditNotesIds as $id) {
+      $creditNotes[$id] = CRM_Utils_Array::value($id, self::$_creditNotes, 0);
     }
     return $creditNotes;
   }
