@@ -28,6 +28,41 @@ function creditnote_civicrm_xmlMenu(&$files) {
  * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_buildForm
  */
 function creditnote_civicrm_buildForm($formName, &$form) {
+  if ('CRM_Contribute_Form_AdditionalPayment' == $formName
+      && $form->getVar('_view') == 'transaction'
+      && ($form->_action & CRM_Core_Action::BROWSE)
+  ) {
+    $payments = $form->get_template_vars('payments');
+    if (empty($payments)) {
+      return FALSE;
+    }
+    $inclause = implode(',', array_keys($payments));
+    $sql = "SELECT cc1.id from_c_id, cc1.contact_id from_con_id, con1.display_name from_name,
+        cc2.id to_c_id, cc2.contact_id to_con_id, con2.display_name to_name,
+        ceft.financial_trxn_id from_ft_id, ccp.financial_trxn_id to_ft_id
+      FROM civicrm_creditnote_payment ccp
+        INNER JOIN civicrm_entity_financial_trxn ceft ON ceft.entity_id = ccp.financial_trxn_id
+          AND ceft.entity_table = 'civicrm_financial_trxn'
+        INNER JOIN civicrm_entity_financial_trxn ceft1
+          ON ceft1.financial_trxn_id = ccp.financial_trxn_id
+          AND ceft1.entity_table = 'civicrm_contribution'
+        INNER JOIN civicrm_contribution cc1 ON cc1.id = ccp.contribution_id
+        INNER JOIN civicrm_contact con1 ON cc1.contact_id = con1.id
+        INNER JOIN civicrm_contribution cc2 ON cc2.id = ceft1.entity_id
+        INNER JOIN civicrm_contact con2 ON cc2.contact_id = con2.id
+      WHERE (ccp.financial_trxn_id IN ($inclause) OR ceft.financial_trxn_id IN ($inclause))
+    ";
+    $dao = CRM_Core_DAO::executeQuery($sql);
+    while ($dao->fetch()) {
+      if (array_key_exists($dao->to_ft_id, $payments)) {
+        $payments[$dao->to_ft_id]['payment_instrument'] .= '<br>(Used from: <a class="action-item crm-hover-button" href=' . CRM_Utils_System::url('civicrm/contact/view/contribution', "reset=1&id={$dao->from_c_id}&cid={$dao->from_con_id}&action=view") . ">{$dao->from_name}</a>)";
+      }
+      if (array_key_exists($dao->from_ft_id, $payments)) {
+        $payments[$dao->from_ft_id]['payment_instrument'] .= '<br>(Used for: <a class="action-item crm-hover-button" href=' . CRM_Utils_System::url('civicrm/contact/view/contribution', "reset=1&id={$dao->to_c_id}&cid={$dao->to_con_id}&action=view") . ">{$dao->to_name}</a>)";
+      }
+    }
+    $form->assign('payments', $payments);
+  }
   if ('CRM_Contribute_Form_ContributionView' == $formName) {
     $contributionId = $form->get('id');
     $query = "SELECT cc.id, cc.contact_id, cont.display_name,
@@ -46,10 +81,10 @@ function creditnote_civicrm_buildForm($formName, &$form) {
     $usedFor = $usedFrom = array();
     while ($dao->fetch()) {
       if ($dao->id == $contributionId) {
-        $usedFrom[$dao->from_con_id] = '<a href=' . CRM_Utils_System::url('civicrm/contact/view/contribution', "reset=1&id={$dao->from_c_id}&cid={$dao->from_con_id}&action=view") . ">{$dao->from_name}</a>";
+        $usedFrom[$dao->from_con_id] = '<a class="action-item crm-hover-button" href=' . CRM_Utils_System::url('civicrm/contact/view/contribution', "reset=1&id={$dao->from_c_id}&cid={$dao->from_con_id}&action=view") . ">{$dao->from_name}</a>";
       }
       else {
-        $usedFor[$dao->contact_id] = '<a href=' . CRM_Utils_System::url('civicrm/contact/view/contribution', "reset=1&id={$dao->id}&cid={$dao->contact_id}&action=view") . ">{$dao->display_name}</a>";
+        $usedFor[$dao->contact_id] = '<a class="action-item crm-hover-button"	href=' . CRM_Utils_System::url('civicrm/contact/view/contribution', "reset=1&id={$dao->id}&cid={$dao->contact_id}&action=view") . ">{$dao->display_name}</a>";
       }
     }
     $form->assign('usedFor', implode('<br>', $usedFor));

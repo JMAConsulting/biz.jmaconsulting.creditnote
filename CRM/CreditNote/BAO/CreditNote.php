@@ -149,6 +149,13 @@ class CRM_CreditNote_BAO_CreditNote extends CRM_Core_DAO {
             CRM_Core_DAO::setFieldValue('CRM_Contribute_BAO_Contribution', $creditNoteId, 'contribution_status_id', $statusId);
           }
         }
+	$entityParams = array(
+	  'entity_table' => 'civicrm_financial_trxn',
+	  'entity_id' => $creditNoteDetails['financial_trxn_id'],
+	  'financial_trxn_id' => $ftDao->id,
+	  'amount' => $ftDao->total_amount,
+	);
+	civicrm_api3('EntityFinancialTrxn', 'create', $entityParams);
       }
       self::$_processedCreditNotes = NULL;
     }
