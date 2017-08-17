@@ -144,6 +144,12 @@ function creditnote_civicrm_buildForm($formName, &$form) {
       );
     }
   }
+  if ($formName == 'CRM_Admin_Form_Preferences_Contribute') {
+    $status = Civi::settings()->get('enable_credit_note_for_status');
+    if (!empty($status)) {
+      $form->setDefaults(array('enable_credit_note_for_status' => $status));
+    }
+  }
 }
 
 /**
