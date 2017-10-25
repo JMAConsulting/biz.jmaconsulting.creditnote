@@ -115,47 +115,47 @@ class CRM_CreditNote_BAO_CreditNote extends CRM_Core_DAO {
         $contributionId = $creditNoteId;
         $contribution = civicrm_api3('Contribution', 'getSingle', array(
           'return' => array("total_amount", 'currency', 'contribution_status_id', 'financial_type_id', 'payment_instrument_id'),
-	  'id' => $contributionId,
-	));
-	$amount = $creditNoteDetails['amount'];
-	$status = CRM_Core_PseudoConstant::getName('CRM_Contribute_BAO_Contribution', 'contribution_status_id', $contribution['contribution_status_id']);
-	if ($status == 'Pending refund') {
-	  $amount = -1 * $amount;
+	        'id' => $contributionId,
+	      ));
+      	$amount = $creditNoteDetails['amount'];
+      	$status = CRM_Core_PseudoConstant::getName('CRM_Contribute_BAO_Contribution', 'contribution_status_id', $contribution['contribution_status_id']);
+      	if ($status == 'Pending refund') {
+	         $amount = -1 * $amount;
         }
         $trxnParams = array(
           'contribution_id' => $contributionId,
           'is_payment' => 1,
-	  'total_amount' => $amount,
-	  'net_amount' => $amount,
-	  'from_financial_account_id' => self::getFromAccountId($contribution),
-	  'to_financial_account_id' => CRM_Financial_BAO_FinancialTypeAccount::getInstrumentFinancialAccount($paymentInstrument),
-	  'trxn_date' => date('YmdHis'),
-	  'currency' => $contribution['currency'],
-	  'status_id' => CRM_Core_PseudoConstant::getKey('CRM_Contribute_BAO_Contribution', 'contribution_status_id', 'Completed'),
-	  'payment_instrument_id' => $paymentInstrument,
-	);
-	$ftDao = CRM_Core_BAO_FinancialTrxn::create($trxnParams);
+      	  'total_amount' => $amount,
+      	  'net_amount' => $amount,
+      	  'from_financial_account_id' => self::getFromAccountId($contribution),
+      	  'to_financial_account_id' => CRM_Financial_BAO_FinancialTypeAccount::getInstrumentFinancialAccount($paymentInstrument),
+      	  'trxn_date' => date('YmdHis'),
+      	  'currency' => $contribution['currency'],
+      	  'status_id' => CRM_Core_PseudoConstant::getKey('CRM_Contribute_BAO_Contribution', 'contribution_status_id', 'Completed'),
+      	  'payment_instrument_id' => $paymentInstrument,
+        );
+        $ftDao = CRM_Core_BAO_FinancialTrxn::create($trxnParams);
 
-	// store financial item Proportionaly.
-	$trxnParams = array(
+        // store financial item Proportionaly.
+        $trxnParams = array(
           'total_amount' => $ftDao->total_amount,
           'contribution_id' => $contributionId,
         );
-	CRM_Contribute_BAO_Contribution::assignProportionalLineItems($trxnParams, $ftDao->id, $contribution['total_amount']);
-        if ($status == 'Pending refund') {
+        CRM_Contribute_BAO_Contribution::assignProportionalLineItems($trxnParams, $ftDao->id, $contribution['total_amount']);
+        if (in_array($status, array('Pending refund', 'Partially paid'))) {
           $paymentBalance = CRM_Core_BAO_FinancialTrxn::getPartialPaymentWithType($creditNoteId, 'contribution', FALSE, $contribution['total_amount']);
           if ($paymentBalance == 0) {
             $statusId = CRM_Core_PseudoConstant::getKey('CRM_Contribute_BAO_Contribution', 'contribution_status_id', 'Completed');
             CRM_Core_DAO::setFieldValue('CRM_Contribute_BAO_Contribution', $creditNoteId, 'contribution_status_id', $statusId);
           }
         }
-	$entityParams = array(
-	  'entity_table' => 'civicrm_financial_trxn',
-	  'entity_id' => $creditNoteDetails['financial_trxn_id'],
-	  'financial_trxn_id' => $ftDao->id,
-	  'amount' => $ftDao->total_amount,
-	);
-	civicrm_api3('EntityFinancialTrxn', 'create', $entityParams);
+        $entityParams = array(
+      	  'entity_table' => 'civicrm_financial_trxn',
+      	  'entity_id' => $creditNoteDetails['financial_trxn_id'],
+      	  'financial_trxn_id' => $ftDao->id,
+      	  'amount' => $ftDao->total_amount,
+        );
+        civicrm_api3('EntityFinancialTrxn', 'create', $entityParams);
       }
       self::$_processedCreditNotes = NULL;
     }
