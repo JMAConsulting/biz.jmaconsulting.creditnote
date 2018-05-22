@@ -75,8 +75,7 @@ function creditnote_civicrm_buildForm($formName, &$form) {
         INNER JOIN civicrm_contribution cc1 on cc1.id = ccp.contribution_id
         INNER JOIN civicrm_contact cont1 ON cont1.id = cc1.contact_id
       WHERE (ccp.contribution_id = {$contributionId} or cc.id = {$contributionId})
-      GROUP BY cc.id
-    ";
+      GROUP BY cc.id, cc.contact_id, cont.display_name, cc1.id, cc1.contact_id, cont1.display_name ";
     $dao = CRM_Core_DAO::executeQuery($query);
     $usedFor = $usedFrom = array();
     while ($dao->fetch()) {
