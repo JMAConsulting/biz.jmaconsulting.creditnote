@@ -12,17 +12,6 @@ function creditnote_civicrm_config(&$config) {
 }
 
 /**
- * Implements hook_civicrm_xmlMenu().
- *
- * @param array $files
- *
- * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_xmlMenu
- */
-function creditnote_civicrm_xmlMenu(&$files) {
-  _creditnote_civix_civicrm_xmlMenu($files);
-}
-
-/**
  * Implements hook_civicrm_buildForm().
  *
  * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_buildForm
@@ -194,7 +183,6 @@ function creditnote_civicrm_uninstall() {
       civicrm_api3('EntityFinancialAccount', 'delete', array('id' => $entityFinancialAccountID));
     }
   }
-  _creditnote_civix_civicrm_uninstall();
 }
 
 /**
@@ -204,31 +192,6 @@ function creditnote_civicrm_uninstall() {
  */
 function creditnote_civicrm_enable() {
   _creditnote_civix_civicrm_enable();
-}
-
-/**
- * Implements hook_civicrm_disable().
- *
- * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_disable
- */
-function creditnote_civicrm_disable() {
-  _creditnote_civix_civicrm_disable();
-}
-
-/**
- * Implements hook_civicrm_upgrade().
- *
- * @param $op string, the type of operation being performed; 'check' or 'enqueue'
- * @param $queue CRM_Queue_Queue, (for 'enqueue') the modifiable list of pending up upgrade tasks
- *
- * @return mixed
- *   Based on op. for 'check', returns array(boolean) (TRUE if upgrades are pending)
- *                for 'enqueue', returns void
- *
- * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_upgrade
- */
-function creditnote_civicrm_upgrade($op, CRM_Queue_Queue $queue = NULL) {
-  return _creditnote_civix_civicrm_upgrade($op, $queue);
 }
 
 /**
@@ -251,7 +214,6 @@ function creditnote_civicrm_managed(&$entities) {
       ),
     );
   }
-  _creditnote_civix_civicrm_managed($entities);
 }
 
 /**
@@ -263,44 +225,6 @@ function _getCNPaymentInstrumentID() {
     'name' => 'Credit Note',
   ));
   return CRM_Utils_Array::value('id', $result);
-}
-
-/**
- * Implements hook_civicrm_caseTypes().
- *
- * Generate a list of case-types.
- *
- * @param array $caseTypes
- *
- * Note: This hook only runs in CiviCRM 4.4+.
- *
- * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_caseTypes
- */
-function creditnote_civicrm_caseTypes(&$caseTypes) {
-  _creditnote_civix_civicrm_caseTypes($caseTypes);
-}
-
-/**
- * Implements hook_civicrm_angularModules().
- *
- * Generate a list of Angular modules.
- *
- * Note: This hook only runs in CiviCRM 4.5+. It may
- * use features only available in v4.6+.
- *
- * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_caseTypes
- */
-function creditnote_civicrm_angularModules(&$angularModules) {
-_creditnote_civix_civicrm_angularModules($angularModules);
-}
-
-/**
- * Implements hook_civicrm_alterSettingsFolders().
- *
- * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_alterSettingsFolders
- */
-function creditnote_civicrm_alterSettingsFolders(&$metaDataFolders = NULL) {
-  _creditnote_civix_civicrm_alterSettingsFolders($metaDataFolders);
 }
 
 /**
